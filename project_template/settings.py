@@ -1,7 +1,7 @@
 # Django settings for {{ project_name }} project.
 import os
-PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
-here = lambda *x: os.path.join(PROJECT_DIR, *x)
+PROJECT_ROOT = os.path.dirname(os.path.realpath(__file__))
+here = lambda *x: os.path.join(PROJECT_ROOT, *x)
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
