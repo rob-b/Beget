@@ -82,19 +82,8 @@ def main():
     # copy over our settings
     update_settings(project_path, project_name)
 
-    sys.exit(project_path)
-    sys.argv[1] = 'startproject'
-
-    directory, project_name = os.getcwd(), sys.argv[2]
-    project_path = os.path.join(directory, project_name)
-
-    # create some standard dirs we will likely use
-    os.mkdir(os.path.join(project_path, 'templates'))
-    for dir in ('css', 'img', 'js'):
-        os.makedirs(os.path.join(project_path, 'assets', dir))
-
     # Create a random SECRET_KEY hash, and put it in the main settings.
-    main_settings_file = os.path.join(directory, project_name, 'settings.py')
+    main_settings_file = os.path.join(project_path, 'settings.py')
     settings_contents = open(main_settings_file, 'r').read()
     fp = open(main_settings_file, 'w')
     secret_key = ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i in range(50)])
