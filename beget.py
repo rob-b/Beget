@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from django.core import management
 import sys
 import os
 import re
@@ -23,16 +22,68 @@ def update_settings(project_path, name):
             new_file.close()
             old_file.close()
 
-def main():
 
-    # we shift around the argv and then call the default django startproject
-    # command.
+def is_valid_name(name):
+    message = None
+    if not re.search(r'^[_a-zA-Z]\w*$', name):
+        # Provide a smart error message, depending on the error.
+        if not re.search(r'^[_a-zA-Z]', name):
+            message = 'make sure the name begins with a letter or underscore'
+        else:
+            message = 'use only numbers, letters and underscores'
+    return message
+
+root_files = ('REQUIREMENTS.txt', 'README', 'setup.py', 'fabfile.py',
+              '__init__.py')
+
+def main():
     try:
-        sys.argv.append(sys.argv[1])
+        project_name = sys.argv[1]
     except IndexError:
         sys.exit('Project name required')
+
+    # make sure that there is not already a module with this name
+    try:
+        __import__(project_name)
+    except ImportError:
+        pass
+    else:
+        sys.exit("%r conflicts with the name of an existing Python module and "
+                 "cannot be used as a project name. Please try another name." %
+                 project_name)
+    # before we proceed; is this name valid?
+    message = is_valid_name(project_name)
+    if message is not None:
+        sys.exit(message)
+
+    directory = os.getcwd()
+    project_parent = os.path.join(directory, project_name)
+    project_path = os.path.join(directory, project_name, project_name)
+
+
+    # make the project directory
+    try:
+        os.makedirs(project_path)
+    except OSError, e:
+        if e.args[0] == 17:
+            sys.exit("the directory '%s' already exists" % project_path)
+        else:
+            raise
+
+    for f in root_files:
+        dest = os.path.join(project_parent, f)
+        open(dest, 'w')
+
+    # create some standard dirs we will likely use
+    os.mkdir(os.path.join(project_path, 'templates'))
+    for di in ('css', 'img', 'js'):
+        os.makedirs(os.path.join(project_path, 'assets', di))
+
+    # copy over our settings
+    update_settings(project_path, project_name)
+
+    sys.exit(project_path)
     sys.argv[1] = 'startproject'
-    management.execute_from_command_line()
 
     directory, project_name = os.getcwd(), sys.argv[2]
     project_path = os.path.join(directory, project_name)
@@ -41,9 +92,6 @@ def main():
     os.mkdir(os.path.join(project_path, 'templates'))
     for dir in ('css', 'img', 'js'):
         os.makedirs(os.path.join(project_path, 'assets', dir))
-
-    # copy over our settings
-    update_settings(project_path, project_name)
 
     # Create a random SECRET_KEY hash, and put it in the main settings.
     main_settings_file = os.path.join(directory, project_name, 'settings.py')
