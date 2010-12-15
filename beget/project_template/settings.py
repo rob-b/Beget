@@ -77,8 +77,3 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.admin',
 )
-
-try:
-    from settings_local import *
-except ImportError:
-    pass
