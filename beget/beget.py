@@ -6,6 +6,46 @@ import re
 from random import choice
 import beget
 
+
+join = lambda *p: os.path.join(*p)
+root_files = ('REQUIREMENTS.txt', 'README', 'setup.py', 'fabfile.py',
+              '__init__.py')
+
+
+class File(object):
+
+    def __init__(self, file, name=None):
+        self.file = file
+        if name is None:
+            name = getattr(self.file, 'name')
+        self.name = name
+        self.mode = getattr(self.file, 'mode')
+
+    @classmethod
+    def open_file(klass, path, mode='r'):
+        self = klass(open(path, mode))
+        return self
+
+    def open(self, mode='r'):
+        if not self.closed:
+            self.file.seek(0)
+        elif self.name and os.path.exists(self.name):
+            self.file = open(self.name, mode or self.mode)
+
+    def close(self):
+        self.file.close()
+
+    @property
+    def closed(self):
+        return not self.file or self.file.closed
+
+    def read(self):
+        return self.file.read()
+
+    def write(self, s):
+        return self.file.write(s)
+
+
 def update_settings(project_path, name):
     template_path = os.path.join(os.path.dirname(beget.__file__),
                                  'project_template')
@@ -16,8 +56,8 @@ def update_settings(project_path, name):
         for f in files:
             if f.endswith('.pyc'):
                 continue
-            old_file = open(os.path.join(d, f), 'r')
-            new_file = open(os.path.join(project_path, f), 'w')
+            old_file = File.open_file(os.path.join(d, f), 'r')
+            new_file = File.open_file(os.path.join(project_path, f), 'w')
             new_file.write(old_file.read().replace('{{ project_name }}', name))
             new_file.close()
             old_file.close()
@@ -33,8 +73,20 @@ def is_valid_name(name):
             message = 'use only numbers, letters and underscores'
     return message
 
-root_files = ('REQUIREMENTS.txt', 'README', 'setup.py', 'fabfile.py',
-              '__init__.py')
+
+def create_secret_key(length=50):
+    chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
+    return ''.join([choice(chars) for i in range(length)])
+
+
+def replace_in_file(fobj, st, replacement):
+    content = fobj.read()
+    content = re.sub(st, replacement, content)
+    fobj.close()
+    fobj.open('w')
+    fobj.write(content)
+    return content
+
 
 def main():
     try:
@@ -71,25 +123,27 @@ def main():
             raise
 
     for f in root_files:
-        dest = os.path.join(project_parent, f)
+        dest = join(project_parent, f)
         open(dest, 'w')
 
     # create some standard dirs we will likely use
-    os.mkdir(os.path.join(project_path, 'templates'))
-    for di in ('css', 'img', 'js'):
-        os.makedirs(os.path.join(project_path, 'assets', di))
+    directories = [
+        join(project_parent, 'media'),
+        join(project_path, 'templates'),
+        join(project_path, 'static', 'css'),
+        join(project_path, 'static', 'images'),
+        join(project_path, 'static', 'js'),
+    ]
+    map(os.makedirs, directories)
 
     # copy over our settings
     update_settings(project_path, project_name)
 
-    # Create a random SECRET_KEY hash, and put it in the main settings.
-    main_settings_file = os.path.join(project_path, 'settings.py')
-    settings_contents = open(main_settings_file, 'r').read()
-    fp = open(main_settings_file, 'w')
-    secret_key = ''.join([choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i in range(50)])
-    settings_contents = re.sub(r"(?<=SECRET_KEY = ')'", secret_key + "'", settings_contents)
-    fp.write(settings_contents)
-    fp.close()
+    # Create a random SECRET_KEY and put it in the main settings.
+    main_settings_file = open(os.path.join(project_path, 'settings.py'))
+    secret_key = "'%s'" % create_secret_key()
+    replace_in_file(File(main_settings_file),
+                    r"(?<=SECRET_KEY = )''", secret_key)
 
 if __name__ == "__main__":
     main()
