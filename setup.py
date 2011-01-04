@@ -10,4 +10,5 @@ setup(
     packages = ['beget'],
     scripts=['bin/beget'],
     install_requires = ['setuptools'],
+    package_data={'': ['project_template/*py']},
 )
