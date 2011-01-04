@@ -1,7 +1,7 @@
 # Django settings for {{ project_name }} project.
 import os
 PROJECT_ROOT = os.path.dirname(os.path.realpath(__file__))
-here = lambda *x: os.path.join(PROJECT_ROOT, *x)
+here = lambda *x: os.path.realpath(os.path.join(PROJECT_ROOT, *x))
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -36,9 +36,12 @@ SITE_ID = 1
 # to load the internationalization machinery.
 USE_I18N = True
 
-MEDIA_ROOT = here('assets')
-MEDIA_URL = '/assets/'
+MEDIA_ROOT = here('..', 'media')
+MEDIA_URL = '/m/'
 ADMIN_MEDIA_PREFIX = '/media/'
+
+STATIC_URL = '/s/'
+STATIC_ROOT = here('static')
 
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = ''
