@@ -3,13 +3,17 @@
 import sys
 import os
 import re
+import shutil
+import fileinput
 from random import choice
 import beget
 
 
 join = lambda *p: os.path.join(*p)
-root_files = ('REQUIREMENTS.txt', 'README', 'setup.py', 'fabfile.py',
-              '__init__.py')
+root_files = ('requirements.txt', 'readme.rst', 'setup.py', '.gitignore')
+
+
+class InvalidName(Exception): pass
 
 
 class File(object):
@@ -63,15 +67,34 @@ def update_settings(project_path, name):
             old_file.close()
 
 
+def build_file_list(start):
+    candidates = []
+    for d, dirs, files in os.walk(start):
+        for i, dir in enumerate(dirs):
+            if dir.startswith('.'):
+                del dirs[i]
+        for f in files:
+            if not f.endswith('.pyc'):
+                candidates.append(os.path.join(d, f))
+    return candidates
+
+
+def set_names(file_list, project_name):
+    for line in fileinput.FileInput(file_list, inplace=1):
+        if '{{ project_name }}' in line:
+            line = line.replace('{{ project_name }}', project_name)
+        sys.stdout.write(line)
+
+
 def is_valid_name(name):
     message = None
     if not re.search(r'^[_a-zA-Z]\w*$', name):
-        # Provide a smart error message, depending on the error.
         if not re.search(r'^[_a-zA-Z]', name):
             message = 'make sure the name begins with a letter or underscore'
         else:
             message = 'use only numbers, letters and underscores'
-    return message
+    if message is not None:
+        raise InvalidName(message)
 
 
 def create_secret_key(length=50):
@@ -100,47 +123,48 @@ def main():
     except ImportError:
         pass
     else:
-        sys.exit("%r conflicts with the name of an existing Python module and "
-                 "cannot be used as a project name. Please try another name." %
-                 project_name)
+        sys.exit("%r conflicts with the name of an existing Python module "
+                 "and cannot be used as a project name. Please try another "
+                 "name." % project_name)
+
     # before we proceed; is this name valid?
-    message = is_valid_name(project_name)
-    if message is not None:
-        sys.exit(message)
+    try:
+        is_valid_name(project_name)
+    except InvalidName, e:
+        sys.exit(e)
 
     directory = os.getcwd()
-    project_parent = os.path.join(directory, project_name)
-    project_path = os.path.join(directory, project_name, project_name)
+    distribution_dir = os.path.join(directory, project_name)
+    package_dir = os.path.join(directory, project_name, project_name)
 
+    template_path = os.path.join(os.path.dirname(beget.__file__),
+                                 'project_template')
 
-    # make the project directory
     try:
-        os.makedirs(project_path)
+        shutil.copytree(template_path, distribution_dir)
     except OSError, e:
         if e.args[0] == 17:
-            sys.exit("the directory '%s' already exists" % project_path)
+            sys.exit("the directory '%s' already exists" % distribution_dir)
         else:
             raise
+    candidates = build_file_list(distribution_dir)
+    set_names(candidates, project_name)
 
-    for f in root_files:
-        dest = join(project_parent, f)
-        open(dest, 'w')
+    # set the correct name on the package
+    shutil.move(os.path.join(distribution_dir, 'project'), package_dir)
 
     # create some standard dirs we will likely use
     directories = [
-        join(project_parent, 'media'),
-        join(project_path, 'templates'),
-        join(project_path, 'static', 'css'),
-        join(project_path, 'static', 'images'),
-        join(project_path, 'static', 'js'),
+        join(package_dir, 'media'),
+        join(package_dir, 'templates'),
+        join(package_dir, 'static', 'css'),
+        join(package_dir, 'static', 'images'),
+        join(package_dir, 'static', 'js'),
     ]
     map(os.makedirs, directories)
 
-    # copy over our settings
-    update_settings(project_path, project_name)
-
     # Create a random SECRET_KEY and put it in the main settings.
-    main_settings_file = open(os.path.join(project_path, 'settings.py'))
+    main_settings_file = open(os.path.join(package_dir, 'settings.py'))
     secret_key = "'%s'" % create_secret_key()
     replace_in_file(File(main_settings_file),
                     r"(?<=SECRET_KEY = )''", secret_key)

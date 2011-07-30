@@ -4,6 +4,11 @@ import os.path
 import re
 
 
+def get_is_valid_name():
+    from beget import is_valid_name
+    return is_valid_name
+
+
 def fakefile_factory():
     from beget import File
 
@@ -82,6 +87,9 @@ class TestBeget(unittest.TestCase):
         assert message is None
 
 
-def get_is_valid_name():
-    from beget import is_valid_name
-    return is_valid_name
+class TestFileOperation(unittest.TestCase):
+
+    def test_replace_string(self):
+        from StringIO import StringIO
+        example = u"this is a file {{ project_name }}"
+        example = StringIO(example)
