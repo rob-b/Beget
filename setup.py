@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 
 setup(
@@ -7,8 +7,12 @@ setup(
     url='http://github.com/rob-b/Beget',
     license='BSD',
     description="Django project generator",
-    author='rob-b',
+    author='Rob Berry',
+    author_email='rob@pokelondon.com',
     packages=['beget'],
     scripts=['bin/beget'],
-    package_data={'beget': ['project_template/*']},
+    package_data={'beget': ['project_template/setup.py',
+                            'project_template/project/*py']},
+    tests_require=['fudge'],
+    zip_safe=False,
 )
