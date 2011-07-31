@@ -15,9 +15,6 @@ parser.add_option("-k", "--like-krak3n", action="store_true",
                   dest='settings_package')
 
 
-join = lambda *p: os.path.join(*p)
-
-
 class InvalidName(Exception): pass
 
 
@@ -113,11 +110,11 @@ def main():
 
     # create some standard dirs we will likely use
     directories = [
-        join(package_dir, 'media'),
-        join(package_dir, 'templates'),
-        join(package_dir, 'static', 'css'),
-        join(package_dir, 'static', 'images'),
-        join(package_dir, 'static', 'js'),
+        os.path.join(package_dir, 'media'),
+        os.path.join(package_dir, 'templates'),
+        os.path.join(package_dir, 'static', 'css'),
+        os.path.join(package_dir, 'static', 'images'),
+        os.path.join(package_dir, 'static', 'js'),
     ]
     map(os.makedirs, directories)
 
