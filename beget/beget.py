@@ -119,13 +119,24 @@ def main():
     map(os.makedirs, directories)
 
     # Create a random SECRET_KEY and put it in the main settings.
-    main_settings_file = open(os.path.join(package_dir, 'settings.py'))
     secret_key = "SECRET_KEY = '%s'" % create_secret_key()
-    replace_in_file(main_settings_file,
-                    r"SECRET_KEY = ''", secret_key)
+    settings_file = os.path.join(package_dir, 'settings.py')
+    with open(settings_file) as settings:
+        replace_in_file(settings, "SECRET_KEY = ''", secret_key)
 
     if options.settings_package:
-        # os.makedirs(join(package_dir, 'config'))
-        pass
+        config_dir = os.path.join(package_dir, 'config')
+        os.makedirs(config_dir)
+        common = os.path.join(config_dir, 'common.py')
+        shutil.move(settings_file, common)
+        with open(os.path.join(config_dir, '__init__.py'), 'w') as a:
+            a.write('')
+
+        with open(common) as common:
+            replace_in_file(common,
+                            'PROJECT_ROOT = os.path.dirname(os.path.realpath(__file__))',
+                            "PROJECT_ROOT = os.path.dirname(os.path.realpath(os.path.join(__file__, '..')))")
+
+
 if __name__ == "__main__":
     main()
