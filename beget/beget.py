@@ -6,65 +6,19 @@ import re
 import shutil
 import fileinput
 from random import choice
+from optparse import OptionParser
 import beget
 
 
+parser = OptionParser(usage="usage: %prog [options] projectname")
+parser.add_option("-k", "--like-krak3n", action="store_true",
+                  dest='settings_package')
+
+
 join = lambda *p: os.path.join(*p)
-root_files = ('requirements.txt', 'readme.rst', 'setup.py', '.gitignore')
 
 
 class InvalidName(Exception): pass
-
-
-class File(object):
-
-    def __init__(self, file, name=None):
-        self.file = file
-        if name is None:
-            name = getattr(self.file, 'name')
-        self.name = name
-        self.mode = getattr(self.file, 'mode')
-
-    @classmethod
-    def open_file(klass, path, mode='r'):
-        self = klass(open(path, mode))
-        return self
-
-    def open(self, mode='r'):
-        if not self.closed:
-            self.file.seek(0)
-        elif self.name and os.path.exists(self.name):
-            self.file = open(self.name, mode or self.mode)
-
-    def close(self):
-        self.file.close()
-
-    @property
-    def closed(self):
-        return not self.file or self.file.closed
-
-    def read(self):
-        return self.file.read()
-
-    def write(self, s):
-        return self.file.write(s)
-
-
-def update_settings(project_path, name):
-    template_path = os.path.join(os.path.dirname(beget.__file__),
-                                 'project_template')
-    for d, dirs, files in os.walk(template_path):
-        for i, dir in enumerate(dirs):
-            if dir.startswith('.'):
-                del dirs[i]
-        for f in files:
-            if f.endswith('.pyc'):
-                continue
-            old_file = File.open_file(os.path.join(d, f), 'r')
-            new_file = File.open_file(os.path.join(project_path, f), 'w')
-            new_file.write(old_file.read().replace('{{ project_name }}', name))
-            new_file.close()
-            old_file.close()
 
 
 def build_file_list(start):
@@ -79,10 +33,10 @@ def build_file_list(start):
     return candidates
 
 
-def set_names(file_list, project_name):
+def set_names(file_list, project_name, needle='{{ project_name }}' ):
     for line in fileinput.FileInput(file_list, inplace=1):
-        if '{{ project_name }}' in line:
-            line = line.replace('{{ project_name }}', project_name)
+        if needle in line:
+            line = line.replace(needle, project_name)
         sys.stdout.write(line)
 
 
@@ -103,19 +57,23 @@ def create_secret_key(length=50):
 
 
 def replace_in_file(fobj, st, replacement):
-    content = fobj.read()
-    content = re.sub(st, replacement, content)
-    fobj.close()
-    fobj.open('w')
-    fobj.write(content)
-    return content
+    set_names([fobj.name], replacement, st)
+
+
+def validate_args(parser):
+    options, args = parser.parse_args()
+    try:
+        project_name = args[0]
+    except IndexError:
+        parser.error('Project name required')
+    if len(args) > 1:
+        parser.error('Too many arguments')
+    return options, args
 
 
 def main():
-    try:
-        project_name = sys.argv[1]
-    except IndexError:
-        sys.exit('Project name required')
+    options, args = validate_args(parser)
+    project_name = args[0]
 
     # make sure that there is not already a module with this name
     try:
@@ -165,9 +123,12 @@ def main():
 
     # Create a random SECRET_KEY and put it in the main settings.
     main_settings_file = open(os.path.join(package_dir, 'settings.py'))
-    secret_key = "'%s'" % create_secret_key()
-    replace_in_file(File(main_settings_file),
-                    r"(?<=SECRET_KEY = )''", secret_key)
+    secret_key = "SECRET_KEY = '%s'" % create_secret_key()
+    replace_in_file(main_settings_file,
+                    r"SECRET_KEY = ''", secret_key)
 
+    if options.settings_package:
+        # os.makedirs(join(package_dir, 'config'))
+        pass
 if __name__ == "__main__":
     main()
