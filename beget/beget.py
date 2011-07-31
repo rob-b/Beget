@@ -12,7 +12,8 @@ import beget
 
 parser = OptionParser(usage="usage: %prog [options] projectname")
 parser.add_option("-k", "--like-krak3n", action="store_true",
-                  dest='settings_package')
+                  dest='settings_package',
+                  help='Create config/common.py instead of settings.py')
 
 
 class InvalidName(Exception): pass
