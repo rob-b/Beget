@@ -36,7 +36,7 @@ SITE_ID = 1
 # to load the internationalization machinery.
 USE_I18N = True
 
-MEDIA_ROOT = here('..', 'media')
+MEDIA_ROOT = here('media')
 MEDIA_URL = '/m/'
 ADMIN_MEDIA_PREFIX = '/s/admin/'
 STATIC_URL = '/s/'
