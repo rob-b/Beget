@@ -2,6 +2,7 @@ import unittest
 import tempfile
 import os.path
 import re
+import fudge
 
 
 def get_is_valid_name():
@@ -9,59 +10,33 @@ def get_is_valid_name():
     return is_valid_name
 
 
-def fakefile_factory():
-    from beget import File
-
-    class FakeFile(File):
-
-        written = 0
-        content = None
-
-        def open(self, mode='r'):
-            return True
-
-        def read(self):
-            return self.content or u'mocking {{ project_name }}'
-
-        def write(self, s):
-            self.written += 1
-            self.content = s
-
-        def close(self):
-            return True
-
-    return FakeFile
-
-
 class TestBeget(unittest.TestCase):
 
     def test_replace_in_file(self):
-        import beget
         from beget import replace_in_file
-
-        _File = fakefile_factory()
-        beget.File = _File
-        a = _File(tempfile.NamedTemporaryFile('r'))
-        a.content = 'foobarbaz'
-        content = replace_in_file(a, r'bar', 'RAB')
-        self.assertEqual(a.read(), 'fooRABbaz')
-        self.assertEqual(a.written, 1)
+        with tempfile.NamedTemporaryFile('w', delete=True) as a:
+            a.write('foobarbaz')
+            a.seek(0)
+            content = replace_in_file(a, r'bar', 'RAB')
+            content = open(a.name, 'r').read()
+        self.assertEqual(content, 'fooRABbaz')
 
     def test_writing_secret_key(self):
-        import beget
         from beget import replace_in_file
         from beget import create_secret_key
-        _File = fakefile_factory()
-        beget.File =_File
 
-        a = _File(tempfile.NamedTemporaryFile('r'))
-        here = os.path.dirname(__file__)
-        a.content = open(os.path.join(here, 'project_template/settings.py')).read()
+        secret_key = "SECRET_KEY = '%s'" % create_secret_key()
 
-        secret_key = "'%s'" % create_secret_key()
-        assert secret_key not in a.content
-        replace_in_file(a, r"(?<=SECRET_KEY = )''", secret_key)
-        assert secret_key in a.read()
+        with tempfile.NamedTemporaryFile('w', delete=True) as a:
+            here = os.path.dirname(__file__)
+            content = u"SECRET_KEY = ''\nFOO = '100\n\nTEST = 'useful'"
+            assert secret_key not in content
+            a.write(content)
+            a.seek(0)
+            replace_in_file(a, r"SECRET_KEY = ''", secret_key)
+            a.seek(0)
+            content = open(a.name, 'r').read()
+            assert secret_key in content, content
 
     def test_secret_key(self):
         from beget import create_secret_key
@@ -71,10 +46,9 @@ class TestBeget(unittest.TestCase):
         assert not match, u'"%s" is not an valid key char' % match.group()
 
     def test_valid_name_cannot_start_with_digit(self):
+        from beget import InvalidName
         fn = get_is_valid_name()
-        message = fn('321')
-        assert message
-        assert 'make sure the name begins' in message
+        self.assertRaises(InvalidName, fn, '321')
 
     def test_valid_name_can_start_with_underscore(self):
         fn = get_is_valid_name()
@@ -86,10 +60,42 @@ class TestBeget(unittest.TestCase):
         message = fn('a321')
         assert message is None
 
+    @fudge.patch('beget.beget.os')
+    def test_candidate_search(self, os):
+        from beget import build_file_list
+        from os.path import join as _join
+        output = [
+            ('/tmp/foo', ['bar'], ['something.py', 'something.pyc']),
+            ('/tmp/foo/bar', [], ['filename.py', 'filename.pyc']),
+        ]
+        (os.expects('walk').returns(output)
+         .has_attr(path=fudge.Fake().expects('join').calls(_join)))
+        matches = build_file_list('nope')
+        self.assertEqual(['/tmp/foo/something.py',
+                          '/tmp/foo/bar/filename.py'], matches)
 
-class TestFileOperation(unittest.TestCase):
 
-    def test_replace_string(self):
-        from StringIO import StringIO
-        example = u"this is a file {{ project_name }}"
-        example = StringIO(example)
+class TestArgs(unittest.TestCase):
+
+    @fudge.patch('beget.beget.parser')
+    def test_less_then_one_arg_causes_error(self, parser):
+        from beget import validate_args
+        fake_args = {}, []
+        parser.expects('parse_args').returns(fake_args).expects('error')
+        validate_args(parser)
+
+    @fudge.patch('beget.beget.parser')
+    def test_more_than_one_arg_causes_error(self, parser):
+        from beget import validate_args
+        fake_args = {}, [1002, u'sring value']
+        (parser.expects('parse_args')
+         .returns(fake_args).expects('error'))
+        validate_args(parser)
+
+    @fudge.patch('beget.beget.parser')
+    def test_one_arg_expected(self, parser):
+        from beget import validate_args
+        fake_args = {}, ['a']
+        (parser.expects('parse_args')
+         .returns(fake_args).provides('error').times_called(0))
+        validate_args(parser)
