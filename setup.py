@@ -8,7 +8,6 @@ setup(
     license='BSD',
     description="Django project generator",
     author='Rob Berry',
-    author_email='rob@pokelondon.com',
     packages=['beget'],
     scripts=['bin/beget'],
     package_data={'beget': ['project_template/setup.py',
