@@ -16,6 +16,7 @@ setup(
     packages=['beget'],
     scripts=['bin/beget'],
     package_data={'beget': ['project_template/setup.py',
+                            'project_template/.gitignore',
                             'project_template/project/*py']},
     tests_require=['fudge'],
     zip_safe=False,
