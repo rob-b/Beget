@@ -6,7 +6,7 @@ README = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
 
 setup(
     name="beget",
-    version="0.1.1",
+    version="0.1.2",
     url='http://github.com/rob-b/Beget',
     license='BSD',
     description="Django project generator",
