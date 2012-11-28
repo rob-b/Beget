@@ -6,7 +6,7 @@ else
  echo "**> creating virtualenv"
  virtualenv .env
  mkdir -p $HOME/pip-cache
- .env/bin/pip install --download-cache $HOME/pip-cache nose==1.1.2 coverage pylint
+ .env/bin/pip install --download-cache $HOME/pip-cache nose==1.1.2 coverage pylint pep8 clonedigger
 fi
 
 . .env/bin/activate
