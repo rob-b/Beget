@@ -13,4 +13,4 @@ fi
 PYTHONPATH=. python setup.py nosetests --with-xunit --with-coverage --cover-package=beget --cover-inclusive
 coverage xml
 pylint -f parseable -d I0011,R0801 beget | tee pylint.out
-
+clonedigger --cpd-output beget
