@@ -14,4 +14,4 @@ PYTHONPATH=. python setup.py nosetests --with-xunit --with-coverage --cover-pack
 coverage xml
 pylint -f parseable -d I0011,R0801 beget | tee pylint.out
 clonedigger --cpd-output beget
-pep8 beget > pep8.out
+pep8 beget | tee pep8.out
